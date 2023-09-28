@@ -1,0 +1,16 @@
+13:52:15 **** Incremental Build of configuration Release for project stop watch ****
+make all 
+Building file: ../main.c
+Invoking: AVR Compiler
+avr-gcc -Wall -Os -fpack-struct -fshort-enums -ffunction-sections -fdata-sections -std=gnu99 -funsigned-char -funsigned-bitfields -mmcu=atmega32 -DF_CPU=1000000UL -MMD -MP -MF"main.d" -MT"main.o" -c -o "main.o" "../main.c"
+Finished building: ../main.c
+ 
+Building target: stop watch.elf
+Invoking: AVR C Linker
+avr-gcc -Wl,-Map,stop watch.map -mmcu=atmega32 -o "stop watch.elf"  ./main.o   
+avr-gcc.exe: watch.map: No such file or directory
+make: *** [stop watch.elf] Error 1
+"make all" terminated with exit code 2. Build might be incomplete.
+
+13:52:15 Build Failed. 1 errors, 0 warnings. (took 389ms)
+

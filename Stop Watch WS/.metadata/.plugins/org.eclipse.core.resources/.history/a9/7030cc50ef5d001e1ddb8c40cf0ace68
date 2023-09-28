@@ -1,0 +1,108 @@
+/*
+ * main.c
+ *
+ *  Created on: Sep 19, 2023
+ * Describtion: stop watch timer
+ *      Author: Ahmad
+ */
+
+
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <util/delay.h>
+
+unsigned char seconds=0, minutes=0, hours=0;
+
+void Timer1_CTC_init(){ // function to make timer1 count 1 second
+	TCNT1 = 0; // initial value of the timer
+	OCR1A = 15625  ; // compare value to count 1 second on prescaler of 64 and 1MHz cpu frequancy
+	TIMSK |= (1<<OCIE1A); // Timer1 Output Compare A Match Interrupt Enable
+	TCCR1B = (1<<WGM12) | (1<<CS10) | (1<<CS12); // CTC mode with OCR1A as top (mode 4), prescaler of 64
+	TCCR1A = (1<<FOC1A) | (1<<FOC1B); // non PWM mode
+}
+
+void INT0_init(){ // function to enable and configure INT0
+	DDRD &= ~(1<<PD2); // configure PD2(INT0) as input pin
+	PORTD |= (1<<PD2); // enable internal pull up resistor for PD2(INT0) pin
+	MCUCR &= ~(1<<ISC00); MCUCR |= (1<<ISC01); // The falling edge of INT0 generates an interrupt request
+	GICR |= (1<<INT0); // enable external interrupt INT0
+}
+
+void INT1_init(){ // function to enable and configure INT1
+	DDRD &= ~(1<<PD3); // configure PD3(INT1) as input pin
+	MCUCR |= (1<<ISC10) | (1<<ISC11); // The rising edge of INT1 generates an interrupt request
+	GICR |= (1<<INT1); // enable external interrupt INT1
+}
+
+void INT2_init(){ // function to enable and configure INT2
+	DDRB &= ~(1<<PB2); // configure PD2(INT1) as input pin
+	PORTB |= (1<<PB2); // enable internal pull up resistor for PB2(INT2) pin
+	MCUCSR &= ~(1<<ISC2); // The falling edge of INT2 generates an interrupt request
+	GICR |= (1<<INT2); // enable external interrupt INT0
+}
+
+int main(){
+	DDRA |= 0x3F; // configure PA0-PA5 pins in PORTA as output pins
+	DDRC |= 0x0F; // configure PC0-PC3 pins in PORTC as output pins
+	INT0_init(); // activate INT0
+	INT1_init(); // activate INT1
+	INT2_init(); // activate INT2
+	sei(); // enable global interrupts
+	Timer1_CTC_init(); // start timer1 to generate an interrupt every 1 second
+
+	for(;;){
+		PORTA = (PORTA & 0xC0) | 0x01;
+		PORTC = (PORTC & 0xF0) | (seconds%10);
+		_delay_ms(2);
+
+		PORTA = (PORTA & 0xC0) | 0x02;
+		PORTC = (PORTC & 0xF0) | (seconds/10);
+		_delay_ms(2);
+
+		PORTA = (PORTA & 0xC0) | 0x04;
+		PORTC = (PORTC & 0xF0) | (minutes%10);
+		_delay_ms(2);
+
+		PORTA = (PORTA & 0xC0) | 0x08;
+		PORTC = (PORTC & 0xF0) | (minutes/10);
+		_delay_ms(2);
+
+		PORTA = (PORTA & 0xC0) | 0x10;
+		PORTC = (PORTC & 0xF0) | (hours%10);
+		_delay_ms(2);
+
+		PORTA = (PORTA & 0xC0) | 0x20;
+		PORTC = (PORTC & 0xF0) | (hours/10);
+		_delay_ms(2);
+
+	}
+	return 0;
+}
+
+ISR(TIMER1_COMPA_vect)
+{
+	seconds++;
+	if(seconds == 60){
+		seconds = 0;
+		minutes++;
+	}
+	if(minutes == 60){
+		minutes = 0;
+		hours++;
+	}
+	if(hours == 99)
+		hours = 0;
+}
+ISR(INT0_vect){ // reset the stop watch
+	seconds = 0;
+	minutes = 0;
+	hours = 0;
+	TCNT1 = 0;
+}
+ISR(INT1_vect){ // pause the stop watch
+	//TCCR1B &= ~((1<<CS10) | (1<<CS11) | (1<<CS12));
+	TCCR1B &= 0xF8;
+}
+ISR(INT2_vect){ // resume the stop watch
+	TCCR1B |= (1<<CS10) | (1<<CS12);
+}
